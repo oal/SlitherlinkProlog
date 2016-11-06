@@ -1,21 +1,80 @@
 outputFile('./slither_solved.txt').
 inputFile('./slither_unsolved.txt').
 
-/********************* dummy solution algorithms -> fill your correct algorithm here */
+side(0).
+side(1).
+
+getNum(X, Y, SizeX, SizeY, Input, N):-
+    X < SizeX, Y < SizeY,
+    nth0(Y, Input, Row),
+    nth0(X, Row, N).
+getNum(X, Y, SizeX, SizeY, _, edge):-
+    X >= SizeX; Y >= SizeY.
+
+cell(edge, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L).
+cell(?, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L); cell(2, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
+cell(N, T, R, B, L):-
+    side(T), side(R), side(B), side(L), N is T+R+B+L.
+
+subSolve(X, Y, SizeX, SizeY, Input, [T, R, B, L]):-
+    getNum(X, Y, SizeX, SizeY, Input, Num11),
+    cell(Num11, T, R, B, L),
+
+    X1 is X+1,
+    getNum(X1, Y, SizeX, SizeY, Input, Num12),
+    cell(Num12, _, _, _, R),
+
+    Y1 is Y+1,
+    getNum(X, Y1, SizeX, SizeY, Input, Num21),
+    cell(Num21, B, _, _, _).
+    %Crossing is (R+B + R3+B2) mod 2,
+    %Crossing = 0.
+
+
 /* doSolve(SizeX,SizeY,Input,Output) */
-doSolve(_,_,Solution,Solution).
+doSolve(SizeX, SizeY, Input, Solution):-
+    subSolve(0, 0, SizeX, SizeY, Input, [T, R, B, L]),
+    subSolve(1, 0, SizeX, SizeY, Input, [T2, R2, B2, L2]),
+    subSolve(0, 1, SizeX, SizeY, Input, [T3, R3, B3, L3]),
+    subSolve(1, 1, SizeX, SizeY, Input, [T4, R4, B4, L4]),
+    B=T3, R=L2, R3=L4, B2=T4,
+    Solution=[
+        [T, T2],
+        [L, R, R2],
+        [B, B2],
+        [L3, R3, R4],
+        [B3, B4]
+    ].
 
 /********************* writing the result */
-writeFullOutput(S, X, Y):- write(X), write('x'), write(Y), nl, writeOutput(S,X).
+hChar(0, ' ').
+hChar(1, '-').
+vChar(0, ' ').
+vChar(1, '|').
 
-writeOutput([],X):- writeUnknownHorizontal(X).
-writeOutput([E|R],X):- writeUnknownHorizontal(X), writeLine(E), writeOutput(R,X).
+writeHorizontal([]):-
+    write('+'), nl.
+writeHorizontal([H|T]):-
+    hChar(H, Char),
+    write('+'), write(Char),
+    writeHorizontal(T).
 
-writeUnknownHorizontal(0):- write('+'), nl.
-writeUnknownHorizontal(N):- N>0, N1 is N-1, write('+'), write('-'), writeUnknownHorizontal(N1).
+writeVertical([]):- nl.
+writeVertical([H|T]):-
+    vChar(H, Char),
+    write(Char),
+    length(T, TL),
+    (TL > 0, write(' '); write('')),
+    writeVertical(T).
 
-writeLine([]):- write('|'), nl.
-writeLine([E|R]):- write('|'), write(E), writeLine(R).
+writeSolution([]).
+writeSolution([H|Solution]):-
+    length(H, HL),
+    Odd is HL mod 2,
+    (Odd=0, writeHorizontal(H); writeVertical(H)),
+    writeSolution(Solution).
+
+writeFullOutput(S, X, Y):- write(X), write('x'), write(Y), nl, writeSolution(S).
 
 /********************** reading the input */
 readProblem(N,M,Problem):- readInt(N), readInt(M), length(Problem, M), readProblemLines(N,Problem).
