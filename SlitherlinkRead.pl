@@ -4,29 +4,67 @@ inputFile('./slither_unsolved.txt').
 side(0).
 side(1).
 
+crossing(0).
+crossing(2).
+
 getNum(X, Y, SizeX, SizeY, Input, N):-
     X < SizeX, Y < SizeY,
     nth0(Y, Input, Row),
     nth0(X, Row, N).
 getNum(X, Y, SizeX, SizeY, _, edge):-
-    X >= SizeX; Y >= SizeY.
+    X >= SizeX; Y >= SizeY; X < 0; Y < 0.
 
 cell(edge, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L).
-cell(?, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L); cell(2, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
-cell(N, T, R, B, L):-
-    side(T), side(R), side(B), side(L), N is T+R+B+L.
+
+cell(0, 0, 0, 0, 0).
+
+cell(1, 1, 0, 0, 0).
+cell(1, 0, 1, 0, 0).
+cell(1, 0, 0, 1, 0).
+cell(1, 0, 0, 0, 1).
+
+cell(2, 1, 1, 0, 0).
+cell(2, 1, 0, 1, 0).
+cell(2, 1, 0, 0, 1).
+cell(2, 0, 1, 1, 0).
+cell(2, 0, 1, 0, 1).
+cell(2, 0, 0, 1, 1).
+
+cell(3, 1, 1, 1, 0).
+cell(3, 1, 1, 0, 1).
+cell(3, 1, 0, 1, 1).
+cell(3, 0, 1, 1, 1).
+
+cell(4, 1, 1, 1, 1).
 
 subSolve(X, Y, SizeX, SizeY, Input, [T, R, B, L]):-
-    getNum(X, Y, SizeX, SizeY, Input, Num11),
-    cell(Num11, T, R, B, L),
+    getNum(X, Y, SizeX, SizeY, Input, Num),
+    cell(Num, T, R, B, L),
 
-    X1 is X+1,
-    getNum(X1, Y, SizeX, SizeY, Input, Num12),
-    cell(Num12, _, _, _, R),
+    XS1 is X-1,
+    getNum(XS1, Y, SizeX, SizeY, Input, NumXS),
+    cell(NumXS, T2, R2, B2, L2),
+    L=R2,
 
-    Y1 is Y+1,
-    getNum(X, Y1, SizeX, SizeY, Input, Num21),
-    cell(Num21, B, _, _, _).
+    YS1 is Y-1,
+    getNum(X, YS1, SizeX, SizeY, Input, NumYS),
+    cell(NumYS, T3, R3, B3, L3),
+    T=B3,
+    0 is (L3+T2+L+T) mod 2, % top left crossing
+
+    XA1 is X+1,
+    getNum(XA1, Y, SizeX, SizeY, Input, NumXA),
+    cell(NumXA, T4, R4, B4, L4),
+    R=L4,
+    0 is (R3+T4+R+T) mod 2, % top right crossing
+
+    YA1 is Y+1,
+    getNum(X, YA1, SizeX, SizeY, Input, NumYA),
+    cell(NumYA, T5, R5, B5, L5),
+    B=T5,
+    0 is (B2+L5+L+B) mod 2, % bottom left crossing
+    0 is (B4+R5+R+B) mod 2. % bottom right crossing
+    
     %Crossing is (R+B + R3+B2) mod 2,
     %Crossing = 0.
 
@@ -34,10 +72,16 @@ subSolve(X, Y, SizeX, SizeY, Input, [T, R, B, L]):-
 /* doSolve(SizeX,SizeY,Input,Output) */
 doSolve(SizeX, SizeY, Input, Solution):-
     subSolve(0, 0, SizeX, SizeY, Input, [T, R, B, L]),
+    %write('1: '), write(T), write(R), write(B), write(L), nl,
     subSolve(1, 0, SizeX, SizeY, Input, [T2, R2, B2, L2]),
+    R=L2,
+    %write('2: '), write(T2), write(R2), write(B2), write(L2), nl,
     subSolve(0, 1, SizeX, SizeY, Input, [T3, R3, B3, L3]),
+    B=T3,
+    %write('3: '), write(T3), write(R3), write(B3), write(L3), nl,
     subSolve(1, 1, SizeX, SizeY, Input, [T4, R4, B4, L4]),
-    B=T3, R=L2, R3=L4, B2=T4,
+    %write('4: '), write(T4), write(R4), write(B4), write(L4), nl,
+    R3=L4, B2=T4,
     Solution=[
         [T, T2],
         [L, R, R2],
