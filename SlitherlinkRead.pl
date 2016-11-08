@@ -37,48 +37,60 @@ getSquare(X, Y, SizeX, SizeY, Board, Square):-
     length(ColsBefore2, X),
     append(ColsBefore1, [A, B|_], Row1),
     append(ColsBefore2, [C, D|_], Row2),
-    Square = [[A, B], [C, D]].
+    Square = [
+        [A, B],
+        [C, D]
+    ].
 
 validateSquare(X, Y, SizeX, SizeY, Board):-
     getSquare(X, Y, SizeX, SizeY, Board, [
         [[AT, AR, AB, AL], [BT, BR, BB, BL]],
         [[CT, CR, CB, CL], [DT, DR, DB, DL]]
     ]),
-    AR=BL,
-    AB=CT,
-    BB=DT,
-    CR=DL,
+    write(X), write('x'), write(Y), nl,
+    AR=BL, AB=CT, BB=DT, CR=DL,
     0 is (AB+AR+CR+BB) mod 2, % center cross
-    TopEdge is AT+BT+AR,
+    /*TopEdge is AT+BT+AR,
     TopEdge \= 3,
     RightEdge is BR+BB+DR,
     RightEdge \= 3,
     BottomEdge is CB+CR+DB,
     BottomEdge \= 3,
     LeftEdge is AL+CL+AB,
-    LeftEdge \= 3,
+    LeftEdge \= 3,*/
 
     SizeX1 is SizeX-1,
     SizeY1 is SizeY-1,
     (
+        % todo: get all combinations here, fails on 1x1 and 2x2, but works on >= 3x3.
         X = 0, Y = 0, 0 is (AL+AB+CL) mod 2, 0 is (AT+AR+BT) mod 2;
         X = SizeX1, Y = SizeY1, 0 is (BR+BB+DR) mod 2, 0 is (CB+CR+DB) mod 2;
-        X = 0, Y \=0, 0 is (AL+AB+CL) mod 2;
-        Y = 0, X \=0, 0 is (AT+AR+BT) mod 2;
+        X = 0, Y \= 0, 0 is (AL+AB+CL) mod 2;
+        Y = 0, X \= 0, 0 is (AT+AR+BT) mod 2;
         X = SizeX1, Y \= SizeY1, 0 is (BR+BB+DR) mod 2;
         Y = SizeY1, X \= SizeX1, 0 is (CB+CR+DB) mod 2;
         X > 0, Y > 0, X < SizeX1, Y < SizeY1
     ).
 
+partialSolve(X, Y, SizeX, SizeY, Board):-
+    SizeX1 is SizeX-1,
+    SizeY1 is SizeY-1,
+    X1 is X+1,
+    Y1 is Y+1,
+
+    validateSquare(X, Y, SizeX, SizeY, Board),
+
+    (
+        X1 < SizeX1, partialSolve(X1, Y, SizeX, SizeY, Board);
+        Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Board);
+        X1 >= SizeX1, Y1 >= SizeY1
+    ).
+    
 
 /* doSolve(SizeX,SizeY,Input,Output) */
 doSolve(SizeX, SizeY, Input, Board):-
     maplist(maplist(genCell), Input, Board),
-    % todo: support bigger boards
-    validateSquare(0, 0, SizeX, SizeY, Board),
-    validateSquare(1, 0, SizeX, SizeY, Board),
-    validateSquare(0, 1, SizeX, SizeY, Board),
-    validateSquare(1, 1, SizeX, SizeY, Board).
+    partialSolve(0, 0, SizeX, SizeY, Board).
 
 
 /********************* writing the result */
