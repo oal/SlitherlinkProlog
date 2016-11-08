@@ -127,9 +127,18 @@ validateSquare(X, Y, SizeX, SizeY, Board):-
     BottomEdge is CB+CR+DB,
     BottomEdge \= 3,
     LeftEdge is AL+CL+AB,
-    LeftEdge \= 3.
-    % todo: if at edge of board (X=0 etc), check that that edge has no 1-crosses.
-    
+    LeftEdge \= 3,
+
+    SizeX1 is SizeX-1,
+    SizeY1 is SizeY-1,
+    (
+        X = 0, 0 is (AL+AB+CL) mod 2;
+        Y = 0, 0 is (AT+AR+BT) mod 2;
+        X = SizeX1, 0 is (BR+BB+DR) mod 2;
+        Y = SizeY1, 0 is (CB+CR+DB) mod 2;
+        X > 0, Y > 0, X < SizeX1, Y < SizeY1
+    ).
+
 
 /* doSolve(SizeX,SizeY,Input,Output) */
 doSolve(SizeX, SizeY, Input, Solution):-
