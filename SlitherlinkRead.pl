@@ -28,18 +28,28 @@ cell(?, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L); cell(2, T, R, B,
 genCell(N, [T, R, B, L]):-
     cell(N, T, R, B, L).
 
-
 getSquare(X, Y, SizeX, SizeY, Board, Square):-
     X < SizeX-1, Y < SizeY-1,
-    length(RowsBefore, Y),
-    append(RowsBefore, [Row1, Row2|_], Board),
-    length(ColsBefore1, X),
-    length(ColsBefore2, X),
-    append(ColsBefore1, [A, B|_], Row1),
-    append(ColsBefore2, [C, D|_], Row2),
+    nth0(Y, Board, Row1),
+    Y1 is Y+1,
+    nth0(Y1, Board, Row2),
+
+    nth0(X, Row1, [AT, AR, AB, AL]),
+    X1 is X+1,
+
+    nth0(X1, Row1, [BT, BR, BB, BL]),
+    AR=BL, 
+
+    nth0(X, Row2, [CT, CR, CB, CL]),
+    AB=CT, 
+
+    nth0(X1, Row2, [DT, DR, DB, DL]),
+    BB=DT, CR=DL,
+
+    0 is (AB+AR+CR+BB) mod 2, % center cross
     Square = [
-        [A, B],
-        [C, D]
+        [[AT, AR, AB, AL], [BT, BR, BB, BL]],
+        [[CT, CR, CB, CL], [DT, DR, DB, DL]]
     ].
 
 validateSquare(X, Y, SizeX, SizeY, Board):-
@@ -47,9 +57,7 @@ validateSquare(X, Y, SizeX, SizeY, Board):-
         [[AT, AR, AB, AL], [BT, BR, BB, BL]],
         [[CT, CR, CB, CL], [DT, DR, DB, DL]]
     ]),
-    write(X), write('x'), write(Y), nl,
-    AR=BL, AB=CT, BB=DT, CR=DL,
-    0 is (AB+AR+CR+BB) mod 2, % center cross
+    %write(X), write('x'), write(Y), nl,
     /*TopEdge is AT+BT+AR,
     TopEdge \= 3,
     RightEdge is BR+BB+DR,
@@ -63,13 +71,13 @@ validateSquare(X, Y, SizeX, SizeY, Board):-
     SizeY1 is SizeY-1,
     (
         % todo: get all combinations here, fails on 1x1 and 2x2, but works on >= 3x3.
+        X > 0, Y > 0, X < SizeX1, Y < SizeY1;
         X = 0, Y = 0, 0 is (AL+AB+CL) mod 2, 0 is (AT+AR+BT) mod 2;
         X = SizeX1, Y = SizeY1, 0 is (BR+BB+DR) mod 2, 0 is (CB+CR+DB) mod 2;
         X = 0, Y \= 0, 0 is (AL+AB+CL) mod 2;
         Y = 0, X \= 0, 0 is (AT+AR+BT) mod 2;
         X = SizeX1, Y \= SizeY1, 0 is (BR+BB+DR) mod 2;
-        Y = SizeY1, X \= SizeX1, 0 is (CB+CR+DB) mod 2;
-        X > 0, Y > 0, X < SizeX1, Y < SizeY1
+        Y = SizeY1, X \= SizeX1, 0 is (CB+CR+DB) mod 2
     ).
 
 partialSolve(X, Y, SizeX, SizeY, Board):-
