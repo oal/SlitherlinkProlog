@@ -69,32 +69,88 @@ subSolve(X, Y, SizeX, SizeY, Input, [T, R, B, L]):-
     %Crossing = 0.
 
 
+genCell(N, [T, R, B, L]):-
+    cell(N, T, R, B, L).
+/*
+getSides(X, Y, SizeX, SizeY, Input, S):-
+    X < SizeX, Y < SizeY,
+    nth0(Y, Input, Row),
+    nth0(X, Row, S).
+getSides(X, Y, SizeX, SizeY, _, [T, R, B, L]):-
+    X >= SizeX; Y >= SizeY; X < 0; Y < 0; cell(0, T, R, B, L); cell(1, T, R, B, L).
+
+
+validate(X, Y, SizeX, SizeY, Board):-
+    write(X), write('x'), write(Y), nl,
+    X < SizeX, Y < SizeY,
+    getSides(X, Y, SizeX, SizeY, Board, [T, R, B, L]),
+    write([T, R, B, L]), nl,
+
+    X1 is X+1,
+    getSides(X1, Y, SizeX, SizeY, Board, [_, _, _, R]),
+
+    Y1 is Y+1,
+    getSides(X, Y1, SizeX, SizeY, Board, [B, _, _, _]),
+
+    (
+        X1 < SizeX, validate(X1, Y, SizeX, SizeY, Board);
+        Y1 < SizeY, validate(0, Y1, SizeX, SizeY, Board)
+    ).
+
+validate(X, Y, SizeX, SizeY, Board).
+*/
+
+getSquare(X, Y, SizeX, SizeY, Board, Square):-
+    X < SizeX-1, Y < SizeY-1,
+    length(RowsBefore, Y),
+    append(RowsBefore, [Row1, Row2|_], Board),
+    length(ColsBefore1, X),
+    length(ColsBefore2, X),
+    append(ColsBefore1, [A, B|_], Row1),
+    append(ColsBefore2, [C, D|_], Row2),
+    Square = [[A, B], [C, D]].
+
+validateSquare(X, Y, SizeX, SizeY, Board):-
+    getSquare(X, Y, SizeX, SizeY, Board, [
+        [[AT, AR, AB, AL], [BT, BR, BB, BL]],
+        [[CT, CR, CB, CL], [DT, DR, DB, DL]]
+    ]),
+    AR=BL,
+    AB=CT,
+    BB=DT,
+    CR=DL,
+    0 is (AB+AR+CR+BB) mod 2, % center cross
+    TopEdge is AT+BT+AR,
+    TopEdge \= 3,
+    RightEdge is BR+BB+DR,
+    RightEdge \= 3,
+    BottomEdge is CB+CR+DB,
+    BottomEdge \= 3,
+    LeftEdge is AL+CL+AB,
+    LeftEdge \= 3.
+    % todo: if at edge of board (X=0 etc), check that that edge has no 1-crosses.
+    
+
 /* doSolve(SizeX,SizeY,Input,Output) */
 doSolve(SizeX, SizeY, Input, Solution):-
-    subSolve(0, 0, SizeX, SizeY, Input, [T, R, B, L]),
-    %write('1: '), write(T), write(R), write(B), write(L), nl,
-    subSolve(1, 0, SizeX, SizeY, Input, [T2, R2, B2, L2]),
-    R=L2,
-    %write('2: '), write(T2), write(R2), write(B2), write(L2), nl,
-    subSolve(0, 1, SizeX, SizeY, Input, [T3, R3, B3, L3]),
-    B=T3,
-    %write('3: '), write(T3), write(R3), write(B3), write(L3), nl,
-    subSolve(1, 1, SizeX, SizeY, Input, [T4, R4, B4, L4]),
-    %write('4: '), write(T4), write(R4), write(B4), write(L4), nl,
-    R3=L4, B2=T4,
-    Solution=[
-        [T, T2],
-        [L, R, R2],
-        [B, B2],
-        [L3, R3, R4],
-        [B3, B4]
-    ].
+    maplist(maplist(genCell), Input, Board),
+    validateSquare(0, 0, SizeX, SizeY, Board),
+    validateSquare(1, 0, SizeX, SizeY, Board),
+    validateSquare(0, 1, SizeX, SizeY, Board),
+    validateSquare(1, 1, SizeX, SizeY, Board),
+    writeSolution(Board).
+
 
 /********************* writing the result */
 hChar(0, ' ').
 hChar(1, '-').
 vChar(0, ' ').
 vChar(1, '|').
+
+getTop([T, _, _, _], T).
+getRight([_, R, _, _], R).
+getBottom([_, _, B, _], B).
+getLeft([_, _, _, L], L).
 
 writeHorizontal([]):-
     write('+'), nl.
@@ -103,7 +159,7 @@ writeHorizontal([H|T]):-
     write('+'), write(Char),
     writeHorizontal(T).
 
-writeVertical([]):- nl.
+writeVertical([]).
 writeVertical([H|T]):-
     vChar(H, Char),
     write(Char),
@@ -111,12 +167,21 @@ writeVertical([H|T]):-
     (TL > 0, write(' '); write('')),
     writeVertical(T).
 
-writeSolution([]).
-writeSolution([H|Solution]):-
-    length(H, HL),
-    Odd is HL mod 2,
-    (Odd=0, writeHorizontal(H); writeVertical(H)),
-    writeSolution(Solution).
+writeSolution([Row|Rest]):-
+    maplist(getTop, Row, Tops),
+    writeHorizontal(Tops),
+    maplist(getLeft, Row, Lefts),
+    writeVertical(Lefts),
+
+    % last | if set.
+    last(Row, [_, R, _, _]),
+    vChar(R, VChar),
+    write(' '), write(VChar), nl,
+
+    (
+        length(Rest, 0), maplist(getBottom, Row, Bottoms), writeHorizontal(Bottoms);
+        writeSolution(Rest)
+    ).
 
 writeFullOutput(S, X, Y):- write(X), write('x'), write(Y), nl, writeSolution(S).
 
