@@ -1,21 +1,6 @@
 outputFile('./slither_solved.txt').
 inputFile('./slither_unsolved.txt').
 
-side(0).
-side(1).
-
-crossing(0).
-crossing(2).
-
-getNum(X, Y, SizeX, SizeY, Input, N):-
-    X < SizeX, Y < SizeY,
-    nth0(Y, Input, Row),
-    nth0(X, Row, N).
-getNum(X, Y, SizeX, SizeY, _, edge):-
-    X >= SizeX; Y >= SizeY; X < 0; Y < 0.
-
-cell(edge, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L).
-
 cell(0, 0, 0, 0, 0).
 
 cell(1, 1, 0, 0, 0).
@@ -37,68 +22,12 @@ cell(3, 0, 1, 1, 1).
 
 cell(4, 1, 1, 1, 1).
 
-subSolve(X, Y, SizeX, SizeY, Input, [T, R, B, L]):-
-    getNum(X, Y, SizeX, SizeY, Input, Num),
-    cell(Num, T, R, B, L),
-
-    XS1 is X-1,
-    getNum(XS1, Y, SizeX, SizeY, Input, NumXS),
-    cell(NumXS, T2, R2, B2, L2),
-    L=R2,
-
-    YS1 is Y-1,
-    getNum(X, YS1, SizeX, SizeY, Input, NumYS),
-    cell(NumYS, T3, R3, B3, L3),
-    T=B3,
-    0 is (L3+T2+L+T) mod 2, % top left crossing
-
-    XA1 is X+1,
-    getNum(XA1, Y, SizeX, SizeY, Input, NumXA),
-    cell(NumXA, T4, R4, B4, L4),
-    R=L4,
-    0 is (R3+T4+R+T) mod 2, % top right crossing
-
-    YA1 is Y+1,
-    getNum(X, YA1, SizeX, SizeY, Input, NumYA),
-    cell(NumYA, T5, R5, B5, L5),
-    B=T5,
-    0 is (B2+L5+L+B) mod 2, % bottom left crossing
-    0 is (B4+R5+R+B) mod 2. % bottom right crossing
-    
-    %Crossing is (R+B + R3+B2) mod 2,
-    %Crossing = 0.
+cell(?, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L); cell(2, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
 
 
 genCell(N, [T, R, B, L]):-
     cell(N, T, R, B, L).
-/*
-getSides(X, Y, SizeX, SizeY, Input, S):-
-    X < SizeX, Y < SizeY,
-    nth0(Y, Input, Row),
-    nth0(X, Row, S).
-getSides(X, Y, SizeX, SizeY, _, [T, R, B, L]):-
-    X >= SizeX; Y >= SizeY; X < 0; Y < 0; cell(0, T, R, B, L); cell(1, T, R, B, L).
 
-
-validate(X, Y, SizeX, SizeY, Board):-
-    write(X), write('x'), write(Y), nl,
-    X < SizeX, Y < SizeY,
-    getSides(X, Y, SizeX, SizeY, Board, [T, R, B, L]),
-    write([T, R, B, L]), nl,
-
-    X1 is X+1,
-    getSides(X1, Y, SizeX, SizeY, Board, [_, _, _, R]),
-
-    Y1 is Y+1,
-    getSides(X, Y1, SizeX, SizeY, Board, [B, _, _, _]),
-
-    (
-        X1 < SizeX, validate(X1, Y, SizeX, SizeY, Board);
-        Y1 < SizeY, validate(0, Y1, SizeX, SizeY, Board)
-    ).
-
-validate(X, Y, SizeX, SizeY, Board).
-*/
 
 getSquare(X, Y, SizeX, SizeY, Board, Square):-
     X < SizeX-1, Y < SizeY-1,
@@ -132,22 +61,24 @@ validateSquare(X, Y, SizeX, SizeY, Board):-
     SizeX1 is SizeX-1,
     SizeY1 is SizeY-1,
     (
-        X = 0, 0 is (AL+AB+CL) mod 2;
-        Y = 0, 0 is (AT+AR+BT) mod 2;
-        X = SizeX1, 0 is (BR+BB+DR) mod 2;
-        Y = SizeY1, 0 is (CB+CR+DB) mod 2;
+        X = 0, Y = 0, 0 is (AL+AB+CL) mod 2, 0 is (AT+AR+BT) mod 2;
+        X = SizeX1, Y = SizeY1, 0 is (BR+BB+DR) mod 2, 0 is (CB+CR+DB) mod 2;
+        X = 0, Y \=0, 0 is (AL+AB+CL) mod 2;
+        Y = 0, X \=0, 0 is (AT+AR+BT) mod 2;
+        X = SizeX1, Y \= SizeY1, 0 is (BR+BB+DR) mod 2;
+        Y = SizeY1, X \= SizeX1, 0 is (CB+CR+DB) mod 2;
         X > 0, Y > 0, X < SizeX1, Y < SizeY1
     ).
 
 
 /* doSolve(SizeX,SizeY,Input,Output) */
-doSolve(SizeX, SizeY, Input, Solution):-
+doSolve(SizeX, SizeY, Input, Board):-
     maplist(maplist(genCell), Input, Board),
+    % todo: support bigger boards
     validateSquare(0, 0, SizeX, SizeY, Board),
     validateSquare(1, 0, SizeX, SizeY, Board),
     validateSquare(0, 1, SizeX, SizeY, Board),
-    validateSquare(1, 1, SizeX, SizeY, Board),
-    writeSolution(Board).
+    validateSquare(1, 1, SizeX, SizeY, Board).
 
 
 /********************* writing the result */
