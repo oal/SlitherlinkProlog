@@ -207,7 +207,7 @@ writeVertical([H|T]):-
 
 writeSolution([]).
 writeSolution([Row|Rest]):-
-    length(Row, N),
+    length(Rest, N),
     (
         0 is N mod 2, writeHorizontal(Row);
         1 is N mod 2, writeVertical(Row)
