@@ -131,8 +131,6 @@ validateSquare(X, Y, SizeX, SizeY, Input, Board):-
         X = 0,       Y \= 0,      Y \= SizeY1,  validateLeft([A, B, C, D])
     ),
 
-    % todo: Something fails here sometimes.
-    %write([A, B, C, D]), nl,
     length(RowsBefore, Y),
     append(RowsBefore, [Row1,Row2|_], Board),
     length(Cols1, X),
@@ -140,9 +138,6 @@ validateSquare(X, Y, SizeX, SizeY, Input, Board):-
     length(Cols2, X),
     append(Cols2, [C, D|_], Row2),
     length(Row1, SizeX), length(Row2, SizeX).
-    
-    %write([A, B, C, D]), nl,
-    %write('----'), nl.
 
 
 partialSolve(X, Y, SizeX, SizeY, Input, Board):-
@@ -151,7 +146,6 @@ partialSolve(X, Y, SizeX, SizeY, Input, Board):-
     X1 is X+1,
     Y1 is Y+1,
 
-    %write(X), write('x'), write(Y), nl,
     validateSquare(X, Y, SizeX, SizeY, Input, Board),
 
     (
@@ -159,10 +153,28 @@ partialSolve(X, Y, SizeX, SizeY, Input, Board):-
         X1 = SizeX1, Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Input, Board);
         X1 >= SizeX1, Y1 >= SizeY1
     ).
+
+
+simplifyBoard([], []).
+simplifyBoard([Row|Rest], NewSimpleBoard):-
+    simplifyBoard(Rest, SimpleBoard),
+    maplist(getTop, Row, Tops),
+    maplist(getLeft, Row, Lefts),
+
+    % last | if set.
+    last(Row, [_, R, _, _]),
+
+    append(Lefts, [R], Verticals),
+
+    (
+        length(Rest, 0), maplist(getBottom, Row, Bottoms), append([Tops, Verticals, Bottoms], SimpleBoard, NewSimpleBoard);
+        append([Tops, Verticals], SimpleBoard, NewSimpleBoard)
+    ).
     
 
 doSolve(SizeX, SizeY, Input, Board):-
-    partialSolve(0, 0, SizeX, SizeY, Input, Board).
+    partialSolve(0, 0, SizeX, SizeY, Input, RawBoard),
+    simplifyBoard(RawBoard, Board).
 
 
 /********************* writing the result */
@@ -185,7 +197,7 @@ writeHorizontal([H|T]):-
     write('+'), write(Char),
     writeHorizontal(T).
 
-writeVertical([]).
+writeVertical([]):- nl.
 writeVertical([H|T]):-
     vChar(H, Char),
     write(Char),
@@ -193,21 +205,14 @@ writeVertical([H|T]):-
     (TL > 0, write(' '); write('')),
     writeVertical(T).
 
+writeSolution([]).
 writeSolution([Row|Rest]):-
-    maplist(getTop, Row, Tops),
-    writeHorizontal(Tops),
-    maplist(getLeft, Row, Lefts),
-    writeVertical(Lefts),
-
-    % last | if set.
-    last(Row, [_, R, _, _]),
-    vChar(R, VChar),
-    write(' '), write(VChar), nl,
-
+    length(Row, N),
     (
-        length(Rest, 0), maplist(getBottom, Row, Bottoms), writeHorizontal(Bottoms);
-        writeSolution(Rest)
-    ).
+        0 is N mod 2, writeHorizontal(Row);
+        1 is N mod 2, writeVertical(Row)
+    ),
+    writeSolution(Rest).
 
 writeFullOutput(S, X, Y):- write(X), write('x'), write(Y), nl, writeSolution(S).
 
