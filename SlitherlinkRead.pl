@@ -22,29 +22,35 @@ cell(3, 0, 1, 1, 1).
 
 cell(4, 1, 1, 1, 1).
 
-cell(?, T, R, B, L):- cell(0, T, R, B, L); cell(1, T, R, B, L); cell(2, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
+cell(?, T, R, B, L):- cell(1, T, R, B, L); cell(2, T, R, B, L); cell(0, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
 
 
 genCell(N, [T, R, B, L]):-
     cell(N, T, R, B, L).
 
-getSquare(X, Y, SizeX, SizeY, Board, Square):-
+getCell(X, Y, Input, Board, TRBL):-
+    %(
+        %nth0(Y, Board, Row), nth0(X, Row, TRBL).
+        nth0(Y, Input, RowI), nth0(X, RowI, N), genCell(N, TRBL).
+    %).
+
+getSquare(X, Y, SizeX, SizeY, Input, Board, Square):-
     X < SizeX-1, Y < SizeY-1,
-    nth0(Y, Board, Row1),
-    Y1 is Y+1,
-    nth0(Y1, Board, Row2),
 
-    nth0(X, Row1, [AT, AR, AB, AL]),
+    getCell(X, Y, Input, Board, [AT, AR, AB, AL]),
+
     X1 is X+1,
-
-    nth0(X1, Row1, [BT, BR, BB, BL]),
+    getCell(X1, Y, Input, Board, [BT, BR, BB, BL]),
     AR=BL, 
 
-    nth0(X, Row2, [CT, CR, CB, CL]),
+    Y1 is Y+1,
+    getCell(X, Y1, Input, Board, [CT, CR, CB, CL]),
     AB=CT, 
 
-    nth0(X1, Row2, [DT, DR, DB, DL]),
+    getCell(X1, Y1, Input, Board, [DT, DR, DB, DL]),
     BB=DT, CR=DL,
+
+    %write([AT, AR, AB, AL]),
 
     0 is (AB+AR+CR+BB) mod 2, % center cross
     Square = [
@@ -52,60 +58,114 @@ getSquare(X, Y, SizeX, SizeY, Board, Square):-
         [[CT, CR, CB, CL], [DT, DR, DB, DL]]
     ].
 
-validateSquare(X, Y, SizeX, SizeY, Board):-
-    getSquare(X, Y, SizeX, SizeY, Board, [
-        [[AT, AR, AB, AL], [BT, BR, BB, BL]],
-        [[CT, CR, CB, CL], [DT, DR, DB, DL]]
+validateTop([A, B, _, _]):-
+    A = [AT, AR, _, _],
+    B = [BT, _, _, _],
+    0 is (AT+AR+BT) mod 2.
+validateRight([_, B, _, D]):-
+    B = [_, BR, BB, _],
+    D = [_, DR, _, _],
+    0 is (BR+BB+DR) mod 2.
+validateBottom([_, _, C, D]):-
+    C = [_, CR, CB, _],
+    D = [_, _, DB, _],
+    0 is (CB+CR+DB) mod 2.
+validateLeft([A, _, C, _]):-
+    A = [_, _, AB, AL],
+    C = [_, _, _, CL],
+    0 is (AL+AB+CL) mod 2.
+
+validateTopLeft([A, B, C, D]):-
+    validateTop([A, B, C, D]),
+    validateLeft([A, B, C, D]),
+    A = [AT, _, _, AL],
+    0 is (AT+AL) mod 2.
+validateTopRight([A, B, C, D]):-
+    validateTop([A, B, C, D]),
+    validateRight([A, B, C, D]),
+    B = [BT, BR, _, _],
+    0 is (BT+BR) mod 2.
+validateBottomRight([A, B, C, D]):-
+    validateBottom([A, B, C, D]),
+    validateRight([A, B, C, D]),
+    D = [_, DR, DB, _],
+    0 is (DR+DB) mod 2.
+validateBottomLeft([A, B, C, D]):-
+    validateBottom([A, B, C, D]),
+    validateLeft([A, B, C, D]),
+    C = [_, _, CB, CL],
+    0 is (CB+CL) mod 2.
+
+validateSquare(X, Y, SizeX, SizeY, Input, Board):-
+    getSquare(X, Y, SizeX, SizeY, Input, Board, [
+        [A, B],
+        [C, D]
     ]),
-    %write(X), write('x'), write(Y), nl,
-    /*TopEdge is AT+BT+AR,
+
+    A = [AT, AR, AB, AL],
+    B = [BT, BR, BB, BL],
+    C = [CT, CR, CB, CL],
+    D = [DT, DR, DB, DL],
+    TopEdge is AT+BT+AR,
     TopEdge \= 3,
     RightEdge is BR+BB+DR,
     RightEdge \= 3,
     BottomEdge is CB+CR+DB,
     BottomEdge \= 3,
     LeftEdge is AL+CL+AB,
-    LeftEdge \= 3,*/
+    LeftEdge \= 3,
 
-    SizeX1 is SizeX-1,
-    SizeY1 is SizeY-1,
+    SizeX1 is SizeX-2,
+    SizeY1 is SizeY-2,
+    %write(X), write('x'), write(Y), nl,
     (
         % todo: get all combinations here, fails on 1x1 and 2x2, but works on >= 3x3.
-        X > 0, Y > 0, X < SizeX1, Y < SizeY1;
-        X = 0, Y = 0, 0 is (AL+AB+CL) mod 2, 0 is (AT+AR+BT) mod 2;
-        X = SizeX1, Y = SizeY1, 0 is (BR+BB+DR) mod 2, 0 is (CB+CR+DB) mod 2;
-        X = 0, Y \= 0, 0 is (AL+AB+CL) mod 2;
-        Y = 0, X \= 0, 0 is (AT+AR+BT) mod 2;
-        X = SizeX1, Y \= SizeY1, 0 is (BR+BB+DR) mod 2;
-        Y = SizeY1, X \= SizeX1, 0 is (CB+CR+DB) mod 2
-    ).
+        X = 0,       Y = 0,       validateTopLeft([A, B, C, D]);
+        X = SizeX1,  Y = 0,       validateTopRight([A, B, C, D]);
+        X = SizeX1,  Y = SizeY1,  validateBottomRight([A, B, C, D]);
+        X = 0,       Y = SizeY1,  validateBottomLeft([A, B, C, D]);
+        X \= 0,      X \= SizeX1, Y = 0,       validateTop([A, B, C, D]);
+        X = SizeX1,  Y \= 0,      Y \= SizeY1, validateRight([A, B, C, D]);
+        X \= 0,      X \= SizeX1, Y = SizeY1,  validateBottom([A, B, C, D]);
+        X = 0,       Y \= 0,      Y \= SizeY1,  validateLeft([A, B, C, D]);
+        X > 0,       Y > 0,       X < SizeX1, Y < SizeY1
+    ),
 
-partialSolve(X, Y, SizeX, SizeY, Board):-
+    length(RowsBefore, Y),
+    append(RowsBefore, [Row1,Row2|_], Board),
+    length(Cols1, X),
+    append(Cols1, [A, B|_], Row1),
+    length(Cols2, X),
+    append(Cols2, [C, D|_], Row2).
+
+partialSolve(X, Y, SizeX, SizeY, Input, Board):-
     SizeX1 is SizeX-1,
     SizeY1 is SizeY-1,
     X1 is X+1,
     Y1 is Y+1,
 
-    validateSquare(X, Y, SizeX, SizeY, Board),
+    validateSquare(X, Y, SizeX, SizeY, Input, Board),
 
     (
-        X1 < SizeX1, partialSolve(X1, Y, SizeX, SizeY, Board);
-        Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Board);
+        X1 < SizeX1, partialSolve(X1, Y, SizeX, SizeY, Input, Board);
+        Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Input, Board);
         X1 >= SizeX1, Y1 >= SizeY1
     ).
     
 
 /* doSolve(SizeX,SizeY,Input,Output) */
 doSolve(SizeX, SizeY, Input, Board):-
-    maplist(maplist(genCell), Input, Board),
-    partialSolve(0, 0, SizeX, SizeY, Board).
+    %maplist(maplist(genCell), Input, Board),
+    partialSolve(0, 0, SizeX, SizeY, Input, Board).
 
 
 /********************* writing the result */
 hChar(0, ' ').
 hChar(1, '-').
+hChar(_, '?').
 vChar(0, ' ').
 vChar(1, '|').
+vChar(_, '?').
 
 getTop([T, _, _, _], T).
 getRight([_, R, _, _], R).
