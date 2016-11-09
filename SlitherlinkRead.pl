@@ -1,6 +1,9 @@
 outputFile('./slither_solved.txt').
 inputFile('./slither_unsolved.txt').
 
+line(0).
+line(1).
+
 % a crossing / intersection can have 0 or 2 lines set to be valid.
 crossing(0).
 crossing(2).
@@ -129,12 +132,17 @@ validateSquare(X, Y, SizeX, SizeY, Input, Board):-
     ),
 
     % todo: Something fails here sometimes.
+    %write([A, B, C, D]), nl,
     length(RowsBefore, Y),
     append(RowsBefore, [Row1,Row2|_], Board),
     length(Cols1, X),
     append(Cols1, [A, B|_], Row1),
     length(Cols2, X),
-    append(Cols2, [C, D|_], Row2).
+    append(Cols2, [C, D|_], Row2),
+    length(Row1, SizeX), length(Row2, SizeX).
+    
+    %write([A, B, C, D]), nl,
+    %write('----'), nl.
 
 
 partialSolve(X, Y, SizeX, SizeY, Input, Board):-
@@ -143,11 +151,12 @@ partialSolve(X, Y, SizeX, SizeY, Input, Board):-
     X1 is X+1,
     Y1 is Y+1,
 
+    %write(X), write('x'), write(Y), nl,
     validateSquare(X, Y, SizeX, SizeY, Input, Board),
 
     (
         X1 < SizeX1, partialSolve(X1, Y, SizeX, SizeY, Input, Board);
-        Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Input, Board);
+        X1 = SizeX1, Y1 < SizeY1, partialSolve(0, Y1, SizeX, SizeY, Input, Board);
         X1 >= SizeX1, Y1 >= SizeY1
     ).
     
