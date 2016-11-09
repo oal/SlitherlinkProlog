@@ -170,11 +170,50 @@ simplifyBoard([Row|Rest], NewSimpleBoard):-
         length(Rest, 0), maplist(getBottom, Row, Bottoms), append([Tops, Verticals, Bottoms], SimpleBoard, NewSimpleBoard);
         append([Tops, Verticals], SimpleBoard, NewSimpleBoard)
     ).
-    
+
+
+checkMultiloops(Board, X, Y):-
+    nth0(Y, Board, Row),
+    nth0(X, Row, Line),
+    (
+        Line = 1, checkMultiloopsFrom(Board, X, Y),
+        Line = 0, X1 is X+1, checkMultiloops(Board, X1, Y) % assume first row has some line set.
+    ).
+
+
+nullifyLine(Board, X, Y, NewBoard):-
+    length(RowsBefore, Y),
+    append(RowsBefore, [Row|RowsAfter], Board),
+    length(ColsBefore, X),
+
+    append(ColsBefore, [_|ColsAfter], Row),
+    append(ColsBefore, [0|ColsAfter], NewRow),
+    append(RowsBefore, [NewRow], TopRows),
+    append(TopRows, RowsAfter, NewBoard).
+
+
+checkMultiloopsFrom(Board, X, Y):-
+    nullifyLine(Board, X, Y, NewBoard),
+    write(NewBoard), nl,
+    XS1 is X-1,
+    XA1 is X+1,
+    YS1 is Y-1,
+    YA1 is Y+1,
+    (
+        nth0(Y, Board, Row1), nth0(XS1, Row1, 1), checkMultiloopsFrom(NewBoard, XS1, Y);
+        nth0(Y, Board, Row2), nth0(XA1, Row2, 1), checkMultiloopsFrom(NewBoard, XA1, Y);
+        nth0(YS1, Board, Row3), nth0(X, Row3, 1), checkMultiloopsFrom(NewBoard, X, YS1);
+        nth0(YS1, Board, Row4), nth0(XA1, Row4, 1), checkMultiloopsFrom(NewBoard, XA1, YS1);
+        nth0(YA1, Board, Row5), nth0(X, Row5, 1), checkMultiloopsFrom(NewBoard, X, YA1);
+        nth0(YA1, Board, Row6), nth0(XA1, Row6, 1), checkMultiloopsFrom(NewBoard, XA1, YA1)
+    ).
+
+
 
 doSolve(SizeX, SizeY, Input, Board):-
     partialSolve(0, 0, SizeX, SizeY, Input, RawBoard),
-    simplifyBoard(RawBoard, Board).
+    simplifyBoard(RawBoard, Board),
+    checkMultiloops(Board, 0, 0).
 
 
 /********************* writing the result */
