@@ -176,7 +176,7 @@ checkMultiloops(Board, X, Y):-
     nth0(Y, Board, Row),
     nth0(X, Row, Line),
     (
-        Line = 1, checkMultiloopsFrom(Board, X, Y),
+        Line = 1, checkMultiloopsFrom(Board, X, Y);
         Line = 0, X1 is X+1, checkMultiloops(Board, X1, Y) % assume first row has some line set.
     ).
 
@@ -189,25 +189,60 @@ nullifyLine(Board, X, Y, NewBoard):-
     append(ColsBefore, [_|ColsAfter], Row),
     append(ColsBefore, [0|ColsAfter], NewRow),
     append(RowsBefore, [NewRow], TopRows),
+    %write(RowsAfter),nl,
     append(TopRows, RowsAfter, NewBoard).
 
+sumList([], 0).
+sumList([H|T], S):-
+    sumList(T, S2),
+    S is H+S2.
+
+checkNullBoard([]).
+checkNullBoard([Row|Rest]):-
+    sumList(Row, S),
+    S is 0,
+    checkNullBoard(Rest).
 
 checkMultiloopsFrom(Board, X, Y):-
+    %nl,
+    %write(X), write('x'), write(Y), nl,
+    %writeSolution(Board),
+    X >= 0, Y >= 0,
+    length(Board, Rows),
+    Y =< Rows,
+    nth0(Y, Board, Row),
+    length(Row, Cols),
+    X =< Cols,
+    %write('---'),nl,
+    %write(Board), nl,
     nullifyLine(Board, X, Y, NewBoard),
-    write(NewBoard), nl,
+    %write(NewBoard), nl,
     XS1 is X-1,
     XA1 is X+1,
     YS1 is Y-1,
     YA1 is Y+1,
-    (
-        nth0(Y, Board, Row1), nth0(XS1, Row1, 1), checkMultiloopsFrom(NewBoard, XS1, Y);
-        nth0(Y, Board, Row2), nth0(XA1, Row2, 1), checkMultiloopsFrom(NewBoard, XA1, Y);
-        nth0(YS1, Board, Row3), nth0(X, Row3, 1), checkMultiloopsFrom(NewBoard, X, YS1);
-        nth0(YS1, Board, Row4), nth0(XA1, Row4, 1), checkMultiloopsFrom(NewBoard, XA1, YS1);
-        nth0(YA1, Board, Row5), nth0(X, Row5, 1), checkMultiloopsFrom(NewBoard, X, YA1);
-        nth0(YA1, Board, Row6), nth0(XA1, Row6, 1), checkMultiloopsFrom(NewBoard, XA1, YA1)
-    ).
+    YS2 is Y-2,
+    YA2 is Y+2,
 
+    Odd is Cols mod 2,
+    %write(Odd), nl,
+    % ???????????
+    (
+        Odd = 0, nth0(Y, Board, Row1), nth0(XS1, Row1, 1), checkMultiloopsFrom(NewBoard, XS1, Y);
+        Odd = 0, nth0(Y, Board, Row2), nth0(XA1, Row2, 1), checkMultiloopsFrom(NewBoard, XA1, Y);
+        Odd = 0, nth0(YS1, Board, Row3), nth0(XA1, Row3, 1), checkMultiloopsFrom(NewBoard, XA1, YS1);
+        Odd = 0, nth0(YS1, Board, Row3), nth0(X, Row3, 1), checkMultiloopsFrom(NewBoard, X, YS1);
+        Odd = 0, nth0(YA1, Board, Row4), nth0(XA1, Row4, 1), checkMultiloopsFrom(NewBoard, XA1, YA1);
+        Odd = 0, nth0(YA1, Board, Row4), nth0(X, Row4, 1), checkMultiloopsFrom(NewBoard, X, YA1);
+
+        Odd = 1, nth0(YS2, Board, Row5), nth0(X, Row5, 1), checkMultiloopsFrom(NewBoard, X, YS2);
+        Odd = 1, nth0(YA2, Board, Row6), nth0(X, Row6, 1), checkMultiloopsFrom(NewBoard, X, YA2);
+        Odd = 1, nth0(YS1, Board, Row7), nth0(XS1, Row7, 1), checkMultiloopsFrom(NewBoard, XS1, YS1);
+        Odd = 1, nth0(YS1, Board, Row8), nth0(X, Row8, 1), checkMultiloopsFrom(NewBoard, X, YS1);
+        Odd = 1, nth0(YA1, Board, Row9), nth0(XS1, Row9, 1), checkMultiloopsFrom(NewBoard, XS1, YA1);
+        Odd = 1, nth0(YA1, Board, Row10), nth0(X, Row10, 1), checkMultiloopsFrom(NewBoard, X, YA1);
+        checkNullBoard(NewBoard)
+    ).
 
 
 doSolve(SizeX, SizeY, Input, Board):-
