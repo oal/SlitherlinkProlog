@@ -1,13 +1,11 @@
 outputFile('./slither_solved.txt').
 inputFile('./slither_unsolved.txt').
 
-line(0).
-line(1).
-
-% a crossing / intersection can have 0 or 2 lines set to be valid.
+% A crossing / intersection can have 0 or 2 lines set to be valid.
 crossing(0).
 crossing(2).
 
+% cell(N, Top, Right, Bottom, Left) represents a cell and all line configurations possible for that number.
 cell(0, 0, 0, 0, 0).
 cell(1, 1, 0, 0, 0).
 cell(1, 0, 1, 0, 0).
@@ -26,13 +24,18 @@ cell(3, 0, 1, 1, 1).
 cell(4, 1, 1, 1, 1).
 cell(?, T, R, B, L):- cell(1, T, R, B, L); cell(2, T, R, B, L); cell(0, T, R, B, L); cell(3, T, R, B, L); cell(4, T, R, B, L).
 
-genCell(N, [T, R, B, L]):-
-    cell(N, T, R, B, L).
+% Helper predicates to get individual line segments around a cell / number.
+getTop([T, _, _, _], T).
+getRight([_, R, _, _], R).
+getBottom([_, _, B, _], B).
+getLeft([_, _, _, L], L).
 
+% Find the value of the input board at coordinate, and return a possible line configuration around it.
 getCell(X, Y, Input, Board, TRBL):-
-    nth0(Y, Input, RowI), nth0(X, RowI, N), genCell(N, TRBL).
+    nth0(Y, Input, RowI), nth0(X, RowI, N), cell(N, T, R, B, L), TRBL = [T, R, B, L].
 
-getSquare(X, Y, SizeX, SizeY, Input, Board, Square):-
+% Construct / find a valid 2x2 square (its internal edges will be valid, not necessarily for the board as a whole yet).
+getSquare(X, Y, Input, Board, Square):-
     getCell(X, Y, Input, Board, [AT, AR, AB, AL]),
 
     X1 is X+1,
@@ -63,6 +66,7 @@ getSquare(X, Y, SizeX, SizeY, Input, Board, Square):-
         [[CT, CR, CB, CL], [DT, DR, DB, DL]]
     ].
 
+% Helpers used below to validate the specific crossings of squares / edge intersections.
 validateTop([A, B, _, _]):-
     A = [AT, AR, _, _],
     B = [BT, _, _, _],
@@ -110,13 +114,37 @@ validateBottomLeft([A, B, C, D]):-
     Crossing is (CB+CL),
     crossing(Crossing).
 
+% For 1x1 boards, hard code solutions.
+validate1x1([[0]], [[0], [0, 0], [0]]).
+validate1x1([[4]], [[1], [1, 1], [1]]).
+validate1x1([[?]], S):- validate1x1([[0]], S); validate1x1([[4]], S).
 
-validateSquare(X, Y, SizeX, SizeY, Input, Board):-
-    getSquare(X, Y, SizeX, SizeY, Input, Board, [
+% For 2x2 boards, we don't need more than one "sub square" so validate it all at once.
+validate2x2(Input, Board):-
+    getSquare(0, 0, Input, Board, [
         [A, B],
         [C, D]
     ]),
 
+    validateTopLeft([A, B, C, D]),
+    validateTopRight([A, B, C, D]),
+    validateBottomRight([A, B, C, D]),
+    validateBottomLeft([A, B, C, D]),
+    Board = [
+        [A, B],
+        [C, D]
+    ].
+
+% General solution for arbitrary board sizes bigger than 2x2.
+validateSquare(X, Y, SizeX, SizeY, Input, Board):-
+    getSquare(X, Y, Input, Board, [
+        [A, B],
+        [C, D]
+    ]),
+
+    % Depending on which sub square we are validating, we may need to validate the far edges or corners of the board itself.
+    % An alternative solution would have been to extend the whole puzzle into negative coordinates, and beyond its width' height
+    % and use a general solution, but we didn't think about that before this was already working.
     SizeX1 is SizeX-2,
     SizeY1 is SizeY-2,
     (
@@ -131,6 +159,9 @@ validateSquare(X, Y, SizeX, SizeY, Input, Board):-
         X = 0,       Y \= 0,      Y \= SizeY1,  validateLeft([A, B, C, D])
     ),
 
+    % "Insert" the valid square into the board solution by matching and constructing existing rows and columns with new data.
+    % This is a bit hairy but without enforcing lengths for rows and columns like this we ended up with some partially filled
+    % rows in the final solution. Didn't manage to find out why.
     length(RowsBefore, Y),
     append(RowsBefore, [Row1,Row2|_], Board),
     length(Cols1, X),
@@ -140,6 +171,9 @@ validateSquare(X, Y, SizeX, SizeY, Input, Board):-
     length(Row1, SizeX), length(Row2, SizeX).
 
 
+% Recursively called by moving along the X-axis and constructing and validating sub squares. When the right side is reached,
+% X is 0, and Y is increased, for the next recursive call. When next X (X1) and next Y are outside the board,
+% we have a solution (though it may have multiple loops, which is checked for later).
 partialSolve(X, Y, SizeX, SizeY, Input, Board):-
     SizeX1 is SizeX-1,
     SizeY1 is SizeY-1,
@@ -154,7 +188,8 @@ partialSolve(X, Y, SizeX, SizeY, Input, Board):-
         X1 >= SizeX1, Y1 >= SizeY1
     ).
 
-
+% Currently the solution has lots of doubly represented lines (A's right is B's left etc). This predicate dedupes lines and gives
+% a simpler representation for easier handling when writing / printing at the end.
 simplifyBoard([], []).
 simplifyBoard([Row|Rest], NewSimpleBoard):-
     simplifyBoard(Rest, SimpleBoard),
@@ -171,7 +206,8 @@ simplifyBoard([Row|Rest], NewSimpleBoard):-
         append([Tops, Verticals], SimpleBoard, NewSimpleBoard)
     ).
 
-
+% Finds a suitable start position for checking if we have multiple loops. This chooses the first set line it can find, and starts
+% multi loop search from there (se next predicates)
 checkMultiloops(RawBoard, X, Y):-
     simplifyBoard(RawBoard, Board), !,
     nth0(Y, Board, Row),
@@ -181,7 +217,7 @@ checkMultiloops(RawBoard, X, Y):-
         Line = 0, X1 is X+1, checkMultiloops(Board, X1, Y) % assume first row has some line set.
     ).
 
-
+% Takes in a board, and sets line segment at coordinate to empty / 0.
 nullifyLine(Board, X, Y, NewBoard):-
     length(RowsBefore, Y),
     append(RowsBefore, [Row|RowsAfter], Board),
@@ -192,17 +228,22 @@ nullifyLine(Board, X, Y, NewBoard):-
     append(RowsBefore, [NewRow], TopRows),
     append(TopRows, RowsAfter, NewBoard).
 
+% Used to sum all line values in a row. We have a solution without multiloops if we've managed to walk the trail of the whole board
+% and as a result only have 0s on the board.
 sumList([], 0).
 sumList([H|T], S):-
     sumList(T, S2),
     S is H+S2.
 
+% Above predicate used on the board level.
 checkNullBoard([]).
 checkNullBoard([Row|Rest]):-
     sumList(Row, S),
     S is 0,
     checkNullBoard(Rest).
 
+% Walks recursively along the link we've constructed (from start position found in checkMultiloops), and nullifies previous line.
+% So a line "+-+-+" would start at the first segment and result in "+ +-+" etc.
 checkMultiloopsFrom(Board, X, Y):-
     X >= 0, Y >= 0,
     length(Board, Rows),
@@ -215,8 +256,6 @@ checkMultiloopsFrom(Board, X, Y):-
     XA1 is X+1,
     YS1 is Y-1,
     YA1 is Y+1,
-    YS2 is Y-2,
-    YA2 is Y+2,
 
     Odd is Y mod 2,
     (
@@ -227,8 +266,8 @@ checkMultiloopsFrom(Board, X, Y):-
         Odd = 0, nth0(YA1, Board, Row4), nth0(XA1, Row4, 1), !, checkMultiloopsFrom(NewBoard, XA1, YA1);
         Odd = 0, nth0(YA1, Board, Row4), nth0(X, Row4, 1), !, checkMultiloopsFrom(NewBoard, X, YA1);
 
-        Odd = 1, nth0(YS2, Board, Row5), nth0(X, Row5, 1), !, checkMultiloopsFrom(NewBoard, X, YS2);
-        Odd = 1, nth0(YA2, Board, Row6), nth0(X, Row6, 1), !, checkMultiloopsFrom(NewBoard, X, YA2);
+        Odd = 1, YS2 is Y-2, nth0(YS2, Board, Row5), nth0(X, Row5, 1), !, checkMultiloopsFrom(NewBoard, X, YS2);
+        Odd = 1, YA2 is Y+2, nth0(YA2, Board, Row6), nth0(X, Row6, 1), !, checkMultiloopsFrom(NewBoard, X, YA2);
         Odd = 1, nth0(YS1, Board, Row7), nth0(XS1, Row7, 1), !, checkMultiloopsFrom(NewBoard, XS1, YS1);
         Odd = 1, nth0(YS1, Board, Row8), nth0(X, Row8, 1), !, checkMultiloopsFrom(NewBoard, X, YS1);
         Odd = 1, nth0(YA1, Board, Row9), nth0(XS1, Row9, 1), !, checkMultiloopsFrom(NewBoard, XS1, YA1);
@@ -238,23 +277,23 @@ checkMultiloopsFrom(Board, X, Y):-
 
 
 doSolve(SizeX, SizeY, Input, Board):-
-    partialSolve(0, 0, SizeX, SizeY, Input, RawBoard),
-    checkMultiloops(RawBoard, 0, 0),
-    simplifyBoard(RawBoard, Board).
+    (
+        % Special handling for small boards
+        SizeX = 1, SizeY = 1, validate1x1(Input, Board);
+        SizeX = 2, SizeY = 2, validate2x2(Input, RawBoard), simplifyBoard(RawBoard, Board);
+        % General solution for arbitrary board sizes
+        partialSolve(0, 0, SizeX, SizeY, Input, RawBoard), checkMultiloops(RawBoard, 0, 0), simplifyBoard(RawBoard, Board)
+    ).
+    
 
 
-/********************* writing the result */
+% Write solution
 hChar(0, ' ').
 hChar(1, '-').
 hChar(_, '?').
 vChar(0, ' ').
 vChar(1, '|').
 vChar(_, '?').
-
-getTop([T, _, _, _], T).
-getRight([_, R, _, _], R).
-getBottom([_, _, B, _], B).
-getLeft([_, _, _, L], L).
 
 writeHorizontal([]):-
     write('+'), nl.
@@ -282,6 +321,7 @@ writeSolution([Row|Rest]):-
 
 writeFullOutput(S, X, Y):- write(X), write('x'), write(Y), nl, writeSolution(S).
 
+% From Andreas Prinz' starting file on Fronter:
 /********************** reading the input */
 readProblem(N,M,Problem):- readInt(N), readInt(M), length(Problem, M), readProblemLines(N,Problem).
 
